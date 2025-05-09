@@ -30,7 +30,6 @@ Book::~Book() {}
 
 class User {
 public:
-    virtual void dummy() {} // 添加一個虛函數以確保虛函數表生成
     int userId;
     string name;
     string address;
@@ -110,14 +109,25 @@ bool Reader::returnBook(int copyId, LibrarySystem& librarySystem) {
         cout << "You have not borrowed this book!" << endl;
         return false;
     }
-    if (librarySystem.books.find(borrowedBooks[copyId]->ISBN) == librarySystem.books.end()) {
-        cout << "Book not found in library system!" << endl;
+
+    // 保存必要的數據
+    int ISBN = borrowedBooks[copyId]->ISBN;
+    string title = borrowedBooks[copyId]->title;
+
+    // 將書籍移回 librarySystem.books
+    librarySystem.books[ISBN][copyId] = move(borrowedBooks[copyId]);
+
+    // 確保移動後的指針有效
+    if (librarySystem.books[ISBN][copyId]) {
+        librarySystem.books[ISBN][copyId]->isAvailable = true;
+        cout << "Book returned successfully!" << endl;
+        cout << "Book title: " << title << endl;
+    } else {
+        cout << "Error: Failed to return the book!" << endl;
         return false;
     }
-    librarySystem.books[borrowedBooks[copyId]->ISBN][copyId] = move(borrowedBooks[copyId]);
-    librarySystem.books[borrowedBooks[copyId]->ISBN][copyId]->isAvailable = true; // 修正錯誤存取
-    cout << "Book returned successfully!" << endl;
-    cout << "Book title: " << librarySystem.books[borrowedBooks[copyId]->ISBN][copyId]->title << endl; // 修正錯誤存取
+
+    // 從 borrowedBooks 中移除
     borrowedBooks.erase(copyId);
     cout << "Book removed from borrowed books!" << endl;
     cout << "You have " << borrowedBooks.size() << " books left." << endl;
@@ -240,14 +250,25 @@ int main() {
     librarySystem.addReader(6, "Frank", "303 Birch St");
     librarySystem.removeUser(6);
 
-    dynamic_cast<Librarian*>(librarySystem.users[1].get())->addBook(123, 1, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
-    dynamic_cast<Librarian*>(librarySystem.users[1].get())->addBook(123, 2, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
-    dynamic_cast<Librarian*>(librarySystem.users[1].get())->addBook(123, 3, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
-    dynamic_cast<Librarian*>(librarySystem.users[1].get())->addBook(123, 4, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
-    dynamic_cast<Librarian*>(librarySystem.users[1].get())->addBook(123, 5, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
+    // 檢查 dynamic_cast 是否成功
+    Librarian* librarian = dynamic_cast<Librarian*>(librarySystem.users[1].get());
+    if (librarian) {
+        librarian->addBook(123, 1, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
+        librarian->addBook(123, 2, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
+        librarian->addBook(123, 3, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
+        librarian->addBook(123, 4, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
+        librarian->addBook(123, 5, "The Great Gatsby", "F. Scott Fitzgerald", librarySystem);
+    } else {
+        cout << "User with ID 1 is not a Librarian!" << endl;
+    }
 
-    dynamic_cast<Reader*>(librarySystem.users[2].get())->borrowBook(123, 1, librarySystem);
-    dynamic_cast<Reader*>(librarySystem.users[2].get())->returnBook(1, librarySystem);
+    Reader* reader = dynamic_cast<Reader*>(librarySystem.users[2].get());
+    if (reader) {
+        reader->borrowBook(123, 1, librarySystem);
+        reader->returnBook(1, librarySystem);
+    } else {
+        cout << "User with ID 2 is not a Reader!" << endl;
+    }
 
     librarySystem.showAllBooks();
     librarySystem.showBorrowHistory(123);
